@@ -14,14 +14,14 @@ void msptfit(TString filename)
 {
         TFile *file = TFile::Open(filename);
 
-        vector<double> mean1G, dmean1G, momentum1G, dmomentum1G;
-        mean1G.clear(); dmean1G.clear();momentum1G.clear(); dmomentum1G.clear();
+        vector<double> mean1G, dmean1G, sigma1G, dsigma1G, momentum1G, dmomentum1G;
+        mean1G.clear(); dmean1G.clear(); sigma1G.clear(); dsigma1G.clear(); momentum1G.clear(); dmomentum1G.clear();
 
-        vector<double> mean1G5, dmean1G5, momentum1G5, dmomentum1G5;
-        mean1G5.clear(); dmean1G5.clear();momentum1G5.clear(); dmomentum1G5.clear();
+        vector<double> mean1G5, dmean1G5, sigma1G5, dsigma1G5, momentum1G5, dmomentum1G5;
+        mean1G5.clear(); dmean1G5.clear(); sigma1G5.clear(); dsigma1G5.clear(); momentum1G5.clear(); dmomentum1G5.clear();
 
-        vector<double> mean2G, dmean2G, momentum2G, dmomentum2G;
-        mean2G.clear(); dmean2G.clear();momentum2G.clear(); dmomentum2G.clear();
+        vector<double> mean2G, dmean2G, sigma2G, dsigma2G, momentum2G, dmomentum2G;
+        mean2G.clear(); dmean2G.clear(); sigma2G.clear(); dsigma2G.clear(); momentum2G.clear(); dmomentum2G.clear();
 
         gStyle->SetOptStat(11);
         gStyle->SetOptFit(111);
@@ -59,6 +59,9 @@ void msptfit(TString filename)
                 mean1G.push_back(z->GetParameter(1));
                 dmean1G.push_back(z->GetParError(1));
 
+		sigma1G.push_back(z->GetParameter(2));
+		dsigma1G.push_back(z->GetParError(2));
+
                 double mment=(0.02*i+0.02*(i-1))/2;
                 momentum1G.push_back(mment);
                 dmomentum1G.push_back(0);
@@ -68,8 +71,15 @@ void msptfit(TString filename)
         TGraphErrors *mv1G = new TGraphErrors (mean1G.size(),momentum1G.data(),mean1G.data(),dmomentum1G.data(),dmean1G.data());
         mv1G->SetMarkerStyle(20);
         mv1G->SetMarkerSize(.7);
-        mv1G->SetTitle("(mass)^{2} vs transverse momentum in momentum range [0.9, 1] GeV;GeV/Q;(GeV/Q)^{2}");
+        mv1G->SetTitle("(mass)^{2} vs transverse momentum in momentum range [0.9, 1] GeV;pt [GeV/Q];mass^{2} [(GeV/Q)^{2}]");
         mv1G->Draw("AP");
+
+	auto cvv = new TCanvas();
+	TGraphErrors *sm1G = new TGraphErrors (sigma1G.size(),momentum1G.data(),sigma1G.data(),dmomentum1G.data(),dsigma1G.data());
+	sm1G->SetMarkerStyle(20);
+	sm1G->SetMarkerSize(.7);
+	sm1G->SetTitle("#sigma(mass^{2}) vs transverse momentum in momentum range [0.9, 1] GeV;pt [GeV/Q];#sigma(mass^{2}) [(GeV/Q)^{2}]");
+	sm1G->Draw("AP");
 
         for (int i = 2; i < 15; i++) {
                 //auto c = new TCanvas();
@@ -90,6 +100,8 @@ void msptfit(TString filename)
                 mean1G5.push_back(z->GetParameter(1));
                 dmean1G5.push_back(z->GetParError(1));
 
+		sigma1G5.push_back(z->GetParameter(2));
+		dsigma1G5.push_back(z->GetParError(2));
                 double mment=(0.02*i+0.02*(i-1))/2;
                 momentum1G5.push_back(mment);
                 dmomentum1G5.push_back(0);
@@ -99,9 +111,16 @@ void msptfit(TString filename)
         TGraphErrors *mv1G5 = new TGraphErrors (mean1G5.size(),momentum1G5.data(),mean1G5.data(),dmomentum1G5.data(),dmean1G5.data());
         mv1G5->SetMarkerStyle(20);
         mv1G5->SetMarkerSize(.7);
-        mv1G5->SetTitle("(mass)^{2} vs transverse momentum in momentum range [1.4, 1.5] GeV;GeV/Q;(GeV/Q)^{2}");
+        mv1G5->SetTitle("(mass)^{2} vs transverse momentum in momentum range [1.4, 1.5] GeV;pt [GeV/Q];mass^{2} [(GeV/Q)^{2}]");
         mv1G5->Draw("AP");
 
+	auto cvvv = new TCanvas();
+        TGraphErrors *sm1G5 = new TGraphErrors (sigma1G5.size(),momentum1G5.data(),sigma1G5.data(),dmomentum1G5.data(),dsigma1G5.data());
+        sm1G5->SetMarkerStyle(20);
+        sm1G5->SetMarkerSize(.7);
+        sm1G5->SetTitle("#sigma(mass^{2}) vs transverse momentum in momentum range [1.4, 1.5] GeV;pt [GeV/Q];#sigma(mass^{2}) [(GeV/Q)^{2}]");
+        sm1G5->Draw("AP");
+	
 	for (int i = 3; i < 25; i++) {
                 //auto c = new TCanvas();
                 //c->SetLogy();
@@ -114,15 +133,24 @@ void msptfit(TString filename)
 		mass->Fit(z,"SEMQ0","",0.7,1.16);
                 mean2G.push_back(z->GetParameter(1));
                 dmean2G.push_back(z->GetParError(1));
+		sigma2G.push_back(z->GetParameter(2));
+		dsigma2G.push_back(z->GetParError(2));
                 double mment=(0.02*i+0.02*(i-1))/2+0.05;
                 momentum2G.push_back(mment);
                 dmomentum2G.push_back(0);
 	}
 
-	auto cvv = new TCanvas();
+	auto cvvvv = new TCanvas();
         TGraphErrors *mv1zz = new TGraphErrors (mean2G.size(),momentum2G.data(),mean2G.data(),dmomentum2G.data(),dmean2G.data());
         mv1zz->SetMarkerStyle(20);
         mv1zz->SetMarkerSize(.7);
-        mv1zz->SetTitle("(mass)^{2} vs transverse momentum in momentum range [1.9, 2] GeV;GeV/Q;(GeV/Q)^{2}");
+        mv1zz->SetTitle("(mass)^{2} vs transverse momentum in momentum range [1.9, 2] GeV;pt [GeV/Q];mass^{2} [(GeV/Q)^{2}]");
         mv1zz->Draw("AP");
+
+	auto cvvvvv = new TCanvas();
+        TGraphErrors *sm2G = new TGraphErrors (sigma2G.size(),momentum2G.data(),sigma2G.data(),dmomentum2G.data(),dsigma2G.data());
+	sm2G->SetMarkerStyle(20);
+	sm2G->SetMarkerSize(.7);
+	sm2G->SetTitle("#sigma(mass^{2}) vs transverse momentum in momentum range [1.9, 2] GeV;pt [GeV/Q];#sigma(mass^{2}) [(GeV/Q)^{2}]");
+	sm2G->Draw("AP");
 }
