@@ -59,6 +59,7 @@ void reduceData (int runPeriod, int runID, int evID, int partID)
 	TFile *input = TFile::Open(Form("mpd_run_Top_%d_ev%d_p%d.root",runID,evID,partID));
 	TTreeReader Intree("bmndata",input);
 	TTreeReaderValue<CbmVertex> vertex(Intree,"MpdVertex.");
+	TTreeReaderValue<BmnTrigInfoDst> trigger(Intree, "BmnTrigInfo.");
 	TTreeReaderArray<BmnGlobalTrack> track(Intree,"BmnGlobalTrack");
 	TTreeReaderArray<CbmStsTrack> stsvectr(Intree,"StsVector");
 	TTreeReaderArray<BmnTofHit> tof400Hit(Intree,"BmnTof400Hit");
@@ -179,6 +180,8 @@ void reduceData (int runPeriod, int runID, int evID, int partID)
 
         	if (TMath::Sqrt(TMath::Sq(vertex->GetX() - centerOfTargetX) + TMath::Sq(vertex->GetY() - centerOfTargetY)) > radiusOfTarget)
             		continue;*/
+		if (!(trigger->IsTriggerBitTrueAR(7)))   // bit #7 is for CCT2
+            		continue;
 		if (isPileup(tof400Hit)) isPileup400 = true; else isPileup400 = false;
 		if (isPileup(tof700Hit)) isPileup700 = true; else isPileup700  = false; //continue;
 		PVertexPos.SetX(vertex->GetX());
