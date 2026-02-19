@@ -29,6 +29,123 @@ bool isPileup(TTreeReaderArray<BmnTofHit> &TofHit) {
         } else return false;
 }
 
+Int_t GetBC2Int(Int_t leftEl, Int_t rightEl, TTreeReaderValue<BmnTrigInfoDst> trigger) {
+    Int_t bcIntTW = 0;
+
+    // Search for a number of BC2 signals between leftEdge and rightEdge
+    TClonesArray* bc2Digits = trigger->GetBC2Digits();
+    if (bc2Digits->GetEntriesFast() != 1) {
+	    return -1;
+    }
+    BmnTrigWaveDigit* bc2Digit = (BmnTrigWaveDigit*)bc2Digits->UncheckedAt(0);
+    for (Int_t i = leftEl; i <= rightEl; ++i) {
+        if (bc2Digit->GetShortValue()[i] > 100)
+            bcIntTW += bc2Digit->GetShortValue()[i];
+    }
+
+    return bcIntTW;
+}
+Double_t BC2IntCutByRun(Int_t runId)
+{
+    Double_t fBC2IntCut;
+    if (runId < 7840)
+        fBC2IntCut = 9000.;
+    else if (runId < 7984)
+        fBC2IntCut = 11000.;
+    else if (runId < 8005)
+        fBC2IntCut = 14000.;
+    else if (runId < 8011)
+        fBC2IntCut = 13000.;
+    else if (runId < 8030)
+        fBC2IntCut = 12000.;
+    else if (runId < 8060)
+        fBC2IntCut = 10000.;
+    else
+        fBC2IntCut = 11000.;
+
+    return fBC2IntCut;
+}
+
+Bool_t IsBDTriggered(TTreeReaderValue<BmnTrigInfoDst> trigger) {
+    Bool_t bdTrig = kFALSE;
+
+    // Search for a number of BD signals inside the trigger window (+-50 ns)
+    TClonesArray* bdDigits = trigger->GetBDDigits();
+    Int_t nBd = 0;
+    for (Int_t iBd = 0; iBd < bdDigits->GetEntriesFast(); iBd++) {
+        BmnTrigDigit* bdDigit = (BmnTrigDigit*)bdDigits->UncheckedAt(iBd);
+        if ((bdDigit->GetMod() < 0) || (bdDigit->GetMod() > 39)) {
+		return kFALSE;
+        }
+	if (abs(bdDigit->GetTime() - 1930.) < 30.) {
+		nBd++;
+        }
+    }
+    if (nBd >= 2)
+        bdTrig = kTRUE;
+    return bdTrig;
+}
+    const Int_t FDTrigWindow = 4;
+Int_t FDTrigWindowLeftEdgeByRun(Int_t runId)
+{
+    Int_t fFDTrigWindowLeftEdge;
+    fFDTrigWindowLeftEdge = 279 - FDTrigWindow;
+    if (runId < 7069)
+        fFDTrigWindowLeftEdge += 2;
+    else if (runId < 7114)
+        fFDTrigWindowLeftEdge += 3;
+    else if (runId < 7237)
+        fFDTrigWindowLeftEdge += 2;
+    else if (runId < 7560)
+        fFDTrigWindowLeftEdge += 0;
+    else if (runId < 7594)
+        fFDTrigWindowLeftEdge += 3;
+
+    return fFDTrigWindowLeftEdge;
+}
+Int_t FDPeakLimitByRun(Int_t runId)
+{
+    Int_t fFDPeakLimit;
+    fFDPeakLimit = 4250;
+    if (runId < 7069)
+        fFDPeakLimit = 3500;
+    else if (runId < 7114)
+        fFDPeakLimit = 4250;
+    else if (runId < 7148)
+        fFDPeakLimit = 3500;
+    else if (runId < 7237)
+        fFDPeakLimit = 2500;
+    else if (runId < 7258)
+        fFDPeakLimit = 3500;
+    else if (runId < 7429)
+        fFDPeakLimit = 4000;
+    else if (runId < 7486)
+        fFDPeakLimit = 3750;
+    else if (runId < 7560)
+        fFDPeakLimit = 4000;
+    else if (runId < 7594)
+        fFDPeakLimit = 3500;
+
+    return fFDPeakLimit;
+}
+Bool_t IsFDTriggered(Int_t runId, TTreeReaderValue<BmnTrigInfoDst> trigger) {
+	Bool_t fdTrig = kFALSE;
+
+    // Search for a number of FD signals inside the trigger window (+-35 ns)
+    TClonesArray* fdDigits = trigger->GetFDDigits();
+    Int_t start = FDTrigWindowLeftEdgeByRun(runId);
+    Int_t stop = start + 2 * FDTrigWindow;
+    Int_t peak = -100000;
+    BmnTrigWaveDigit* fdDigit0 = (BmnTrigWaveDigit*)fdDigits->UncheckedAt(0);
+    for (Int_t i = start; i <= stop; ++i)
+        if (fdDigit0->GetShortValue()[i] > peak)
+            peak = fdDigit0->GetShortValue()[i];
+    if (peak < FDPeakLimitByRun(runId))
+        fdTrig = kTRUE;
+
+    return fdTrig;
+}
+
 void reduceData (int runPeriod, int runID, int evID, int partID)
 {
 	gRandom->SetSeed(0);
@@ -89,7 +206,7 @@ void reduceData (int runPeriod, int runID, int evID, int partID)
 	vector<int> StsVectrID;
         StsVectrID.clear();
 
-	int PVNTracks = -1, PVNDF = -1;
+	int PVNTracks = -1, PVNDF = -1, Ntracks = -1;
 	
 	vector<int> TrackNHits, TrackNDF, TrackTof400HitID, TrackTof700HitID;
 	TrackNHits.clear(); TrackNDF.clear(); TrackTof400HitID.clear(); TrackTof700HitID.clear();
@@ -117,7 +234,7 @@ void reduceData (int runPeriod, int runID, int evID, int partID)
 	NewTree->Branch("PrimaryVertexPos",&PVertexPos);
 	NewTree->Branch("PrimaryVertexChi2",&PVChi2);
 	NewTree->Branch("PrimaryVertexNDF",&PVNDF);
-	NewTree->Branch("PrimaryVertexNTracks",&PVNTracks);
+	NewTree->Branch("PrimaryVertexNTracks",&PVNTracks);//NewTree->Branch("NumberGlobalTracks",&Ntracks);
 
 	NewTree->Branch("TrackStartPointX",&TrackStartPointX);
 	NewTree->Branch("TrackStartPointY",&TrackStartPointY);
@@ -183,13 +300,16 @@ void reduceData (int runPeriod, int runID, int evID, int partID)
 		if (!(trigger->IsTriggerBitTrueAR(7)))   // bit #7 is for CCT2
             		continue;
 		if (isPileup(tof400Hit)) isPileup400 = true; else isPileup400 = false;
-		if (isPileup(tof700Hit)) isPileup700 = true; else isPileup700  = false; //continue;
+		if (isPileup(tof700Hit)) isPileup700 = true; else isPileup700  = false;
+		Int_t bc2inttw40 = GetBC2Int(258, 267, trigger);
+    		if ((bc2inttw40 == -1)||(bc2inttw40 > BC2IntCutByRun(runID)) || (BC2IntCutByRun(runID) < 0)) continue;
+		if (!IsBDTriggered(trigger) || !IsFDTriggered(runID, trigger)) continue;
 		PVertexPos.SetX(vertex->GetX());
 		PVertexPos.SetY(vertex->GetY());
 		PVertexPos.SetZ(vertex->GetZ());
 		PVChi2 = vertex->GetChi2();
 		PVNDF = vertex->GetNDF();
-		PVNTracks = vertex->GetNTracks();
+		PVNTracks = vertex->GetNTracks();//Ntracks = track.GetSize();
 		for (BmnGlobalTrack& gl : track) {
 			//int n = track.GetEntriesFast();
 			
