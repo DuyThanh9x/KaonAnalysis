@@ -31,14 +31,17 @@ void ragidityVsTransverseMment(vector<TString> filename,vector<double> kw,vector
 	vector<double> *px=nullptr, *py=nullptr,*pz=nullptr, *p=nullptr,*m2=nullptr,*hitz=nullptr;
 	TBranch *brpx=nullptr, *brpy=nullptr,*brpz=nullptr,*brp=nullptr,*brm2=nullptr,*bhitz=nullptr;
 
-	int ntrack = 0;
+	int ntrack = 0,VertexNDF = -1;
         vector<double> *TrackStartX=nullptr, *TrackStartY=nullptr;
         TVector3 *vertex=nullptr;
         double centerOfTargetX = 0.40;
         double centerOfTargetY = 0.15;
         double radiusOfTarget = 1.2;
+	double VertexChi2 = -1;
 	data->SetBranchAddress("PrimaryVertexNTracks",&ntrack);
         data->SetBranchAddress("PrimaryVertexPos",&vertex);
+	data->SetBranchAddress("PrimaryVertexChi2",&VertexChi2);
+        data->SetBranchAddress("PrimaryVertexNDF",&VertexNDF);
         data->SetBranchAddress("TrackStartPointX",&TrackStartX);
         data->SetBranchAddress("TrackStartPointY",&TrackStartY);
 	data->SetBranchAddress("TrackPx",&px,&brpx);
@@ -53,8 +56,10 @@ void ragidityVsTransverseMment(vector<TString> filename,vector<double> kw,vector
 	for (int i = 0; i <data->GetEntries();i++) {
 		data->GetEntry(i);
 		if (ntrack < 4) continue;
-                if (vertex->Z() < -0.5 || vertex->Z() > +0.5) continue;
+                if (vertex->Z() < -0.26 || vertex->Z() > +0.2) continue;
                 if (TMath::Sqrt(TMath::Sq(vertex->X() - centerOfTargetX) + TMath::Sq(vertex->Y() - centerOfTargetY)) > radiusOfTarget) continue;
+		double chi2ndf = VertexChi2/VertexNDF;
+                if ((chi2ndf < 0.1) || (chi2ndf >10)) continue;
 		
 		for (int j=0;j<m2->size();j++) {
 			if (TMath::Sqrt(TMath::Sq(TrackStartX->at(j) - vertex->X()) + TMath::Sq(TrackStartY->at(j) - vertex->Y())) > 1.) continue;
